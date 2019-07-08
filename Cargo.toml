@@ -1,0 +1,27 @@
+[package]
+name = "meowspace"
+version = "0.1.0"
+authors = ["crashspringfield <ccrsh@riseup.net>"]
+edition = "2018"
+
+[dependencies]
+chrono = {version = "0.4", features = ["serde"]}
+diesel = { version = "1.4.1", features = ["postgres", "chrono"] }
+dotenv = "0.9.0"
+juniper = { git = "https://github.com/graphql-rust/juniper.git" }
+frank_jwt = "3.1.1"
+rocket = { version = "0.4.1", default-features = false }
+rocket_cors = { version = "0.4.0", default-features = false }
+rust-crypto = "0.2.36"
+serde = {version = "1.0", features = ["derive"]}
+serde_json = "1.0"
+validator = "0.8.0"
+validator_derive = "0.8.0"
+
+[dependencies.rocket_contrib]
+version = "0.4.1"
+default-features = false
+features = ["json", "diesel_postgres_pool"]
+
+[dev-dependencies]
+once_cell = "0.2.1"

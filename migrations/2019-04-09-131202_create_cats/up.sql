@@ -1,0 +1,8 @@
+CREATE TABLE cats (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR NOT NULL,
+  email TEXT NOT NULL UNIQUE,
+  bio TEXT,
+  image TEXT,
+  hash TEXT NOT NULL
+)
