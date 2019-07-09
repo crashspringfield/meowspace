@@ -1,4 +1,4 @@
-// use crate::auth::Auth;
+use crate::auth::Auth;
 use crate::db::{self, cats::MewCatBoopsies};
 use crate::errors::{Errors, FieldValidator};
 
@@ -41,4 +41,59 @@ pub fn post_cats_register(mew_cat: Json<MewCat>, conn: db::Conn) -> Result<JsonV
             };
             Errors::new(&[(field, "has already been taken")])
         })
+}
+
+#[derive(Deserialize)]
+pub struct LoginCat {
+    cat: LoginCatData
+}
+
+#[derive(Deserialize)]
+struct LoginCatData {
+    email: Option<String>,
+    password: Option<String>
+}
+
+#[post("/cats/login", format = "json", data = "<cat>")]
+pub fn post_cats_login(cat: Json<LoginCat>, conn: db::Conn) -> Result<JsonValue, Errors> {
+    let cat = cat.into_inner().cat;
+
+    let mut extractor = FieldValidator::default();
+    let email = extractor.extract("email", cat.email);
+    let password = extractor.extract("password", cat.password);
+
+    extractor.check()?;
+
+    db::cats::login(&conn, &email, &password)
+        .map(|cat| json!({ "cat": cat.to_cat_auth() }))
+        .ok_or_else(|| Errors::new(&[( "email or password", "is invalid" )]))
+}
+
+#[get("/cats")]
+pub fn get_all_cats(conn: db::Conn) -> Option<JsonValue> {
+    db::cats::all(&conn)
+        .map(|cats| json!({
+            "cats": cats
+        }))
+}
+
+#[get("/cat")]
+pub fn get_cat(auth: Auth, conn: db::Conn) -> Option<JsonValue> {
+    db::cats::find(&conn, auth.id)
+        .map(|cat| json!({
+            "cat": cat.to_cat_auth()
+        }))
+}
+
+#[derive(Deserialize)]
+pub struct UpdateCat {
+    cat: db::cats::UpdateCatData
+}
+
+#[put("/cat", format = "json", data = "<cat>")]
+pub fn put_cat(cat: Json<UpdateCat>, auth: Auth, conn: db::Conn) -> Option<JsonValue> {
+    db::cats::update(&conn, auth.id, &cat.cat)
+        .map(|cat| json!({
+            "cat": cat.to_cat_auth()
+        }))
 }

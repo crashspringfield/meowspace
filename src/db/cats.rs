@@ -41,8 +41,6 @@ pub fn create(
 ) -> Result<Cat, MewCatBoopsies> {
     let hash = &scrypt_simple(password, &ScryptParams::new(14, 8, 1)).expect("hash error");
 
-    println!("\n\n create \n\n", );
-
     let mew_cat = &MewCat {
         name,
         email,
@@ -53,4 +51,68 @@ pub fn create(
         .values(mew_cat)
         .get_result::<Cat>(conn)
         .map_err(Into::into)
+}
+
+pub fn login(
+    conn: &PgConnection,
+    email: &str,
+    password: &str
+) -> Option<Cat> {
+    let cat = cats::table
+        .filter(cats::email.eq(email))
+        .get_result::<Cat>(conn)
+        .map_err(|err| eprintln!("login: {}", err))
+        .ok()?;
+
+    let matches = scrypt_check(password, &cat.hash)
+        .map_err(|err| eprintln!("login -- scrypt_check: {}", err))
+        .ok()?;
+
+    if matches {
+        Some(cat)
+    } else {
+        eprintln!("failed login for {}. Password doesn't match", email);
+        None
+    }
+}
+
+pub fn find(conn: &PgConnection, id: i32) -> Option<Cat> {
+    cats::table
+        .find(id)
+        .get_result(conn)
+        .map_err(|err| println!("find cat: {}", err))
+        .ok()
+}
+
+pub fn all(conn: &PgConnection) -> Option<Vec<Cat>> {
+    cats::table
+        .order(cats::id.desc())
+        .load::<Cat>(conn)
+        .map_err(|err| println!("all cats: {}", err))
+        .ok()
+}
+
+#[derive(Deserialize, AsChangeset, Default, Clone)]
+#[table_name = "cats"]
+pub struct UpdateCatData {
+    name: Option<String>,
+    email: Option<String>,
+    bio: Option<String>,
+    image: Option<String>,
+
+    // hack to skip field
+    #[column_name = "hash"]
+    password: Option<String>,
+}
+
+pub fn update(conn: &PgConnection, id: i32, data: &UpdateCatData) -> Option<Cat> {
+    let data = &UpdateCatData {
+        password: None,
+        ..data.clone()
+    };
+
+    diesel::update(cats::table.find(id))
+        .set(data)
+        .get_result(conn)
+        .ok()
 }

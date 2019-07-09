@@ -41,21 +41,14 @@ pub fn rocket() -> rocket::Rocket {
         .mount(
             "/api",
             routes![
-                routes::cats::post_cats_register
+                routes::cats::post_cats_register,
+                routes::cats::post_cats_login,
+                routes::cats::put_cat,
+                routes::cats::get_cat,
+                routes::cats::get_all_cats,
             ]
         )
         .attach(db::Conn::fairing())
         .attach(rocket_cors::Cors::default())
         .register(catchers![not_found])
 }
-
-
-// pub fn establish_connection() -> PgConnection {
-//     dotenv().ok();
-//
-//     let database_url = env::var("DATABASE_URL")
-//         .expect("DATABASE_URL must be set");
-//
-//     PgConnection::establish(&database_url)
-//         .expect(&format!("Error connecting to {}", database_url))
-// }

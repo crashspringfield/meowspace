@@ -34,3 +34,62 @@ pub fn response_json_value(response: &mut LocalResponse) -> Value {
     let body = response.body().expect("no body");
     serde_json::from_reader(body.into_inner()).expect("can't parse value")
 }
+
+// Retrieve the token. Register user if required.
+pub fn login(client: &Client) -> Token {
+    try_login(client)
+        .unwrap_or_else(|| {
+            register(client, NAME, EMAIL, PASSWORD);
+            try_login(client).expect("Cannot login")
+        })
+}
+
+// Make an authorization header
+pub fn token_header(token: Token) -> Header<'static> {
+    Header::new("authorization", format!("Token {}", token))
+}
+
+pub fn register(client: &Client, name: &str, email: &str, password: &str) {
+    let response = client
+        .post("/api/cats")
+        .header(ContentType::JSON)
+        .body(json_string!({
+            "cat": {
+                "name": name,
+                "email": email,
+                "password": password
+            }
+        }))
+        .dispatch();
+
+    match response.status() {
+        Status::Ok | Status::UnprocessableEntity => {} // ok
+        status => panic!("Registration failed: {}", status)
+    }
+}
+
+fn try_login(client: &Client) -> Option<Token> {
+    let response = &mut client
+        .post("/api/cats/login")
+        .header(ContentType::JSON)
+        .body(json_string!({
+            "cat": {
+                "email": EMAIL,
+                "password": PASSWORD
+            }
+        }))
+        .dispatch();
+
+        if response.status() == Status::UnprocessableEntity {
+            return None;
+        }
+
+        let value = response_json_value(response);
+        let token = value
+            .get("cat")
+            .and_then(|cat| cat.get("token"))
+            .and_then(|token| token.as_str())
+            .map(String::from)
+            .expect("Cannot extract token");
+        Some(token)
+}
